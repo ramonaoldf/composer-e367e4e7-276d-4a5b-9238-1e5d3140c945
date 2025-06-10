@@ -17,7 +17,7 @@ export default {
                 relativeTime: {
                     future: 'in %s',
                     past: '%s ago',
-                    s: number => number + 's ago',
+                    s: (number) => number + 's ago',
                     ss: '%ds ago',
                     m: '1m ago',
                     mm: '%dm ago',
@@ -33,9 +33,7 @@ export default {
             });
 
             let secondsElapsed = moment().diff(time, 'seconds');
-            let dayStart = moment('2018-01-01')
-                .startOf('day')
-                .seconds(secondsElapsed);
+            let dayStart = moment('2018-01-01').startOf('day').seconds(secondsElapsed);
 
             if (secondsElapsed > 300) {
                 return moment(time).fromNow(true);
@@ -50,9 +48,7 @@ export default {
          * Show the time in local time.
          */
         localTime(time) {
-            return moment(time)
-                .local()
-                .format('MMMM Do YYYY, h:mm:ss A');
+            return moment(time).local().format('MMMM Do YYYY, h:mm:ss A');
         },
 
         /**
@@ -68,7 +64,7 @@ export default {
         /**
          * Creates a debounced function that delays invoking a callback.
          */
-        debouncer: _.debounce(callback => callback(), 500),
+        debouncer: _.debounce((callback) => callback(), 500),
 
         /**
          * Show an error message.
