@@ -79,6 +79,10 @@ class TelescopeServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->publishes([
+                __DIR__.'/Storage/migrations' => database_path('migrations'),
+            ], 'telescope-migrations');
+
+            $this->publishes([
                 __DIR__.'/../public' => public_path('vendor/telescope'),
             ], 'telescope-assets');
 
@@ -158,6 +162,6 @@ class TelescopeServiceProvider extends ServiceProvider
      */
     protected function shouldMigrate()
     {
-        return config('telescope.driver') === 'database';
+        return Telescope::$runsMigrations && config('telescope.driver') === 'database';
     }
 }
