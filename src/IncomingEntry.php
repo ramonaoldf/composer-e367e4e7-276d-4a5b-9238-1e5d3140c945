@@ -161,7 +161,7 @@ class IncomingEntry
     public function hasMonitoredTag()
     {
         if (! empty($this->tags)) {
-            return resolve(EntriesRepository::class)->isMonitoring($this->tags);
+            return app(EntriesRepository::class)->isMonitoring($this->tags);
         }
 
         return false;
@@ -174,7 +174,7 @@ class IncomingEntry
      */
     public function isFailedJob()
     {
-        return $this->type == EntryType::JOB &&
+        return $this->type === EntryType::JOB &&
                ($this->content['status'] ?? null) === 'failed';
     }
 
