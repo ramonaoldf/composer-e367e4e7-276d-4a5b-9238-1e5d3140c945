@@ -28,12 +28,12 @@ class RecordingController extends Controller
     /**
      * Toggle recording.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return int|null
      */
     public function toggle()
     {
         if ($this->cache->get('telescope:pause-recording')) {
-            return $this->cache->forget('telescope:pause-recording');;
+            return $this->cache->forget('telescope:pause-recording');
         }
 
         $this->cache->put('telescope:pause-recording', true, now()->addDays(30));
