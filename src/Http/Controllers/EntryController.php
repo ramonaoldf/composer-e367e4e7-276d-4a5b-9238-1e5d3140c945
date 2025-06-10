@@ -73,7 +73,9 @@ abstract class EntryController extends Controller
             return 'paused';
         }
 
-        if (! config('telescope.watchers.'.$this->watcher(), false)) {
+        $watcher = config('telescope.watchers.'.$this->watcher());
+
+        if (! $watcher || (isset($watcher['enabled']) && ! $watcher['enabled'])) {
             return 'off';
         }
 
