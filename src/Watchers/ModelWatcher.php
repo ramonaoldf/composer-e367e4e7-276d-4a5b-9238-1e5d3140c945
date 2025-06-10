@@ -28,7 +28,7 @@ class ModelWatcher extends Watcher
      */
     public function recordAction($event, $data)
     {
-        if ($this->shouldIgnore($event)) {
+        if (! $this->shouldRecord($event)) {
             return;
         }
 
@@ -57,16 +57,15 @@ class ModelWatcher extends Watcher
     }
 
     /**
-     * Determine if the Eloquent event should be ignored.
+     * Determine if the Eloquent event should be recorded.
      *
      * @param  string  $eventName
      * @return bool
      */
-    private function shouldIgnore($eventName)
+    private function shouldRecord($eventName)
     {
         return Str::is([
-            '*booting*', '*booted*', '*creating*', '*retrieved*', '*updating*',
-            '*saving*', '*saved*', '*restoring*', '*deleting*'
+            '*created*', '*updated*', '*restored*', '*deleted*'
         ], $eventName);
     }
 }
