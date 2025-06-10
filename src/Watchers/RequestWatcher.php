@@ -31,7 +31,7 @@ class RequestWatcher extends Watcher
     public function recordRequest(RequestHandled $event)
     {
         Telescope::recordRequest(IncomingEntry::make([
-            'uri' => str_replace($event->request->root(), '', $event->request->path()),
+            'uri' => str_replace($event->request->root(), '', $event->request->fullUrl()),
             'method' => $event->request->method(),
             'headers' => $this->headers($event->request->headers->all()),
             'payload' => $this->payload($event->request->all()),
@@ -79,10 +79,13 @@ class RequestWatcher extends Watcher
      */
     protected function response(Response $response)
     {
-        if (is_string($response->getContent()) &&
-            is_array(json_decode($response->getContent(), true)) &&
+        $content = $response->getContent();
+
+        if (is_string($content) &&
+            is_array(json_decode($content, true)) &&
             json_last_error() === JSON_ERROR_NONE) {
-            return json_decode($response->getContent(), true);
+            return $this->contentWithinLimits($content)
+                    ? json_decode($response->getContent(), true) : 'Purged by Telescope';
         }
 
         return "HTML Response";
@@ -97,5 +100,18 @@ class RequestWatcher extends Watcher
     private function sessionVariables(Request $request)
     {
         return $request->hasSession() ? $request->session()->all() : [];
+    }
+
+    /**
+     * Determine if the content is within the set limits.
+     *
+     * @param  string  $content
+     * @return bool
+     */
+    public function contentWithinLimits($content)
+    {
+        $limit = $this->options['size_limit'] ?? 64;
+
+        return mb_strlen($content) / 1000 <= $limit;
     }
 }
