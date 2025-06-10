@@ -10,10 +10,11 @@ use Illuminate\Support\Facades\DB;
 use Laravel\Telescope\EntryResult;
 use Laravel\Telescope\Watchers\DumpWatcher;
 use Laravel\Telescope\Contracts\PrunableRepository;
+use Laravel\Telescope\Contracts\ClearableRepository;
 use Laravel\Telescope\Contracts\TerminableRepository;
 use Laravel\Telescope\Contracts\EntriesRepository as Contract;
 
-class DatabaseEntriesRepository implements Contract, PrunableRepository, TerminableRepository
+class DatabaseEntriesRepository implements Contract, ClearableRepository, PrunableRepository, TerminableRepository
 {
     /**
      * The database connection name that should be used.
@@ -293,6 +294,17 @@ class DatabaseEntriesRepository implements Contract, PrunableRepository, Termina
         return $this->table('telescope_entries')
                 ->where('created_at', '<', $before)
                 ->delete();
+    }
+
+    /**
+     * Clear all the entries.
+     *
+     * @return void
+     */
+    public function clear()
+    {
+        $this->table('telescope_entries')->delete();
+        $this->table('telescope_monitoring')->delete();
     }
 
     /**
