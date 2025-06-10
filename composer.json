@@ -1,0 +1,46 @@
+{
+    "name": "laravel/telescope",
+    "description": "An elegant debug assistant for the Laravel framework.",
+    "keywords": [
+        "laravel",
+        "monitoring",
+        "debugging"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Taylor Otwell",
+            "email": "taylor@laravel.com"
+        },
+        {
+            "name": "Mohamed Said",
+            "email": "mohamed@laravel.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.2",
+        "moontoast/math": "^1.1",
+        "symfony/var-dumper": "^4.1"
+    },
+    "require-dev": {},
+    "autoload": {
+        "psr-4": {
+            "Laravel\\Telescope\\": "src/"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0-dev"
+        },
+        "laravel": {
+            "providers": [
+                "Laravel\\Telescope\\TelescopeServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
