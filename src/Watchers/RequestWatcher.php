@@ -40,7 +40,7 @@ class RequestWatcher extends Watcher
             'controller_action' => optional($event->request->route())->getActionName(),
             'middleware' => optional($event->request->route())->gatherMiddleware() ?? [],
             'headers' => $this->headers($event->request->headers->all()),
-            'payload' => $this->payload($event->request->all()),
+            'payload' => $this->payload($this->input($event->request)),
             'session' => $this->payload($this->sessionVariables($event->request)),
             'response_status' => $event->response->getStatusCode(),
             'response' => $this->response($event->response),
@@ -98,6 +98,26 @@ class RequestWatcher extends Watcher
     }
 
     /**
+     * Extract the input from the given request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array
+     */
+    private function input(Request $request)
+    {
+        $files = $request->files->all();
+
+        array_walk_recursive($files, function (&$file) {
+            $file = [
+                'name' => $file->getClientOriginalName(),
+                'size' => ($file->getSize() / 1000).'KB',
+            ];
+        });
+
+        return array_replace_recursive($request->input(), $files);
+    }
+
+    /**
      * Format the given response object.
      *
      * @param  \Symfony\Component\HttpFoundation\Response  $response
@@ -121,7 +141,7 @@ class RequestWatcher extends Watcher
         if ($response instanceof IlluminateResponse && $response->getOriginalContent() instanceof View) {
             return [
                 'view' => $response->getOriginalContent()->getPath(),
-                'data' => $this->extractDataFromView($response->getOriginalContent())
+                'data' => $this->extractDataFromView($response->getOriginalContent()),
             ];
         }
 

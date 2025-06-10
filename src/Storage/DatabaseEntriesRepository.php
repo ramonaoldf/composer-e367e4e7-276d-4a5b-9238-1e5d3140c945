@@ -7,6 +7,7 @@ use Laravel\Telescope\EntryType;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Laravel\Telescope\EntryResult;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Telescope\Contracts\PrunableRepository;
 use Laravel\Telescope\Contracts\ClearableRepository;
 use Laravel\Telescope\Contracts\TerminableRepository;
@@ -225,6 +226,17 @@ class DatabaseEntriesRepository implements Contract, ClearableRepository, Prunab
     }
 
     /**
+     * Load the monitored tags from storage.
+     *
+     * @return void
+     */
+    public function loadMonitoredTags()
+    {
+        $this->monitoredTags = Schema::connection($this->connection)->hasTable('telescope_monitoring')
+                            ? $this->monitoring() : [];
+    }
+
+    /**
      * Determine if any of the given tags are currently being monitored.
      *
      * @param  array  $tags
@@ -233,7 +245,7 @@ class DatabaseEntriesRepository implements Contract, ClearableRepository, Prunab
     public function isMonitoring(array $tags)
     {
         if (is_null($this->monitoredTags)) {
-            $this->monitoredTags = $this->monitoring();
+            $this->loadMonitoredTags();
         }
 
         return count(array_intersect($tags, $this->monitoredTags)) > 0;

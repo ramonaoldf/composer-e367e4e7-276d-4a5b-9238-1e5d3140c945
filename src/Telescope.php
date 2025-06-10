@@ -103,7 +103,9 @@ class Telescope
      */
     public static function start($app)
     {
-        if ($app->runningUnitTests()) {
+        if ($app->runningUnitTests() ||
+            ! (static::runningApprovedArtisanCommand($app) ||
+            static::handlingApprovedRequest($app))) {
             return;
         }
 
@@ -111,10 +113,7 @@ class Telescope
 
         static::registerMailableTagExtractor();
 
-        if (static::runningApprovedArtisanCommand($app) ||
-            static::handlingNonTelescopeRequest($app)) {
-            static::startRecording();
-        }
+        static::startRecording();
     }
 
     /**
@@ -144,19 +143,21 @@ class Telescope
     }
 
     /**
-     * Determine if the application is handling a request not originating from Telescope, or Horizon.
+     * Determine if the application is handling an approved request.
      *
      * @param  \Illuminate\Foundation\Application  $app
      * @return bool
      */
-    protected static function handlingNonTelescopeRequest($app)
+    protected static function handlingApprovedRequest($app)
     {
         return ! $app->runningInConsole() && ! $app['request']->is(
-            config('telescope.path').'*',
-            'telescope-api*',
-            'vendor/telescope*',
-            'horizon*',
-            'vendor/horizon*'
+            array_merge([
+                config('telescope.path').'*',
+                'telescope-api*',
+                'vendor/telescope*',
+                'horizon*',
+                'vendor/horizon*',
+            ], config('telescope.ignore_paths', []))
         );
     }
 
@@ -167,6 +168,8 @@ class Telescope
      */
     public static function startRecording()
     {
+        app(EntriesRepository::class)->loadMonitoredTags();
+
         static::$shouldRecord = ! cache('telescope:pause-recording');
     }
 
@@ -214,8 +217,12 @@ class Telescope
             static::$tagUsing ? call_user_func(static::$tagUsing, $entry) : []
         );
 
-        if (Auth::hasUser()) {
-            $entry->user(Auth::user());
+        try {
+            if (Auth::hasUser()) {
+                $entry->user(Auth::user());
+            }
+        } catch (Throwable $e) {
+            // Do nothing.
         }
 
         static::withoutRecording(function () use ($entry) {
@@ -591,7 +598,7 @@ class Telescope
         return [
             'path' => config('telescope.path'),
             'timezone' => config('app.timezone'),
-            'recording' => ! cache('telescope:pause-recording')
+            'recording' => ! cache('telescope:pause-recording'),
         ];
     }
 }
