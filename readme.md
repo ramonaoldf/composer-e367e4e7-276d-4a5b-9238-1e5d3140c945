@@ -18,11 +18,13 @@ Laravel Telescope is an elegant debug assistant for the Laravel framework. Teles
 
 You may use Composer to install Telescope into your Laravel project:
 
-    composer require laravel/telescope
+    composer require laravel/telescope --dev
 
-> **Note:** Telescope requires Laravel 5.7+.
+> **Note:** Telescope requires Laravel 5.7.7+.
 
-After installing Horizon, publish its assets using the `telescope:install` Artisan command. After installing Telescope, you should also run the `migrate` command:
+> **Note:** If you're using MariaDB make sure you use 10.2.7+.
+
+After installing Telescope, publish its assets using the `telescope:install` Artisan command. After installing Telescope, you should also run the `migrate` command:
 
     php artisan telescope:install
 
