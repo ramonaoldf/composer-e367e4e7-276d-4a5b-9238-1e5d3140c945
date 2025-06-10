@@ -44,11 +44,11 @@ class Telescope
     public static $afterRecordingHook;
 
     /**
-     * The callback that adds tags to the record.
+     * The callbacks that add tags to the record.
      *
-     * @var \Closure
+     * @var \Closure[]
      */
-    public static $tagUsing;
+    public static $tagUsing = [];
 
     /**
      * The list of queued entries to be stored.
@@ -184,7 +184,6 @@ class Telescope
                 'vendor/telescope*',
                 'horizon*',
                 'vendor/horizon*',
-                'nova-api*',
             ], config('telescope.ignore_paths', []))
         );
     }
@@ -251,9 +250,9 @@ class Telescope
             return;
         }
 
-        $entry->type($type)->tags(
-            static::$tagUsing ? call_user_func(static::$tagUsing, $entry) : []
-        );
+        $entry->type($type)->tags(array_map(function ($tagCallback) use ($entry) {
+            return $tagCallback($entry);
+        }, static::$tagUsing));
 
         try {
             if (Auth::hasResolvedGuards() && Auth::hasUser()) {
@@ -534,14 +533,14 @@ class Telescope
     }
 
     /**
-     * Set the callback that adds tags to the record.
+     * Add a callback that adds tags to the record.
      *
      * @param  \Closure  $callback
      * @return static
      */
     public static function tag(Closure $callback)
     {
-        static::$tagUsing = $callback;
+        static::$tagUsing[] = $callback;
 
         return new static;
     }
