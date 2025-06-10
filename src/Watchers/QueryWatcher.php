@@ -2,6 +2,7 @@
 
 namespace Laravel\Telescope\Watchers;
 
+use Illuminate\Support\Str;
 use Laravel\Telescope\Telescope;
 use Laravel\Telescope\IncomingEntry;
 use Illuminate\Database\Events\QueryExecuted;
@@ -29,12 +30,16 @@ class QueryWatcher extends Watcher
     {
         $time = $event->time;
 
+        $caller = $this->getCallerFromStackTrace();
+
         Telescope::recordQuery(IncomingEntry::make([
             'connection' => $event->connectionName,
             'bindings' => $this->formatBindings($event),
             'sql' => $event->sql,
             'time' => number_format($time, 2),
             'slow' => isset($this->options['slow']) && $time >= $this->options['slow'],
+            'file' => $caller['file'],
+            'line' => $caller['line'],
         ])->tags($this->tags($event)));
     }
 
@@ -58,5 +63,21 @@ class QueryWatcher extends Watcher
     protected function formatBindings($event)
     {
         return $event->connection->prepareBindings($event->bindings);
+    }
+
+    /**
+     * Find the first frame in the stack trace outside of Telescope/Laravel
+     *
+     * @return array
+     */
+    protected function getCallerFromStackTrace()
+    {
+        $trace = collect(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS))->forget(0);
+
+        return $trace->first(function ($frame) {
+            return ! Str::contains($frame['file'],
+                base_path('vendor'.DIRECTORY_SEPARATOR.'laravel')
+            );
+        });
     }
 }
