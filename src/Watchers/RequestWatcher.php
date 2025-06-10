@@ -2,10 +2,12 @@
 
 namespace Laravel\Telescope\Watchers;
 
+use Illuminate\View\View;
 use Illuminate\Support\Arr;
 use Illuminate\Http\Request;
 use Laravel\Telescope\Telescope;
 use Laravel\Telescope\IncomingEntry;
+use Illuminate\Database\Eloquent\Model;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 
@@ -31,13 +33,16 @@ class RequestWatcher extends Watcher
     public function recordRequest(RequestHandled $event)
     {
         Telescope::recordRequest(IncomingEntry::make([
-            'uri' => str_replace($event->request->root(), '', $event->request->fullUrl()),
+            'uri' => str_replace($event->request->root(), '', $event->request->fullUrl()) ?: '/',
             'method' => $event->request->method(),
+            'controller_action' => optional($event->request->route())->getActionName(),
+            'middleware' => optional($event->request->route())->gatherMiddleware() ?? [],
             'headers' => $this->headers($event->request->headers->all()),
             'payload' => $this->payload($event->request->all()),
             'session' => $this->payload($this->sessionVariables($event->request)),
             'response_status' => $event->response->getStatusCode(),
             'response' => $this->response($event->response),
+            'duration' => defined('LARAVEL_START') ? floor((microtime(true) - LARAVEL_START) * 1000) : null,
         ]));
     }
 
@@ -49,9 +54,17 @@ class RequestWatcher extends Watcher
      */
     protected function headers($headers)
     {
-        return collect($headers)->map(function ($header) {
+        $headers = collect($headers)->map(function ($header) {
             return $header[0];
         })->toArray();
+
+        foreach (Telescope::$hiddenRequestHeaders as $header) {
+            if (Arr::get($headers, $header)) {
+                Arr::set($headers, $header, '********');
+            }
+        }
+
+        return $headers;
     }
 
     /**
@@ -72,6 +85,17 @@ class RequestWatcher extends Watcher
     }
 
     /**
+     * Extract the session variables from the given request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array
+     */
+    private function sessionVariables(Request $request)
+    {
+        return $request->hasSession() ? $request->session()->all() : [];
+    }
+
+    /**
      * Format the given response object.
      *
      * @param  \Symfony\Component\HttpFoundation\Response  $response
@@ -85,21 +109,14 @@ class RequestWatcher extends Watcher
             is_array(json_decode($content, true)) &&
             json_last_error() === JSON_ERROR_NONE) {
             return $this->contentWithinLimits($content)
-                    ? json_decode($response->getContent(), true) : 'Purged by Telescope';
+                    ? json_decode($response->getContent(), true) : 'Purged By Telescope';
         }
 
-        return "HTML Response";
-    }
+        $originalContent = $response->getOriginalContent();
 
-    /**
-     * Extract the session variables from the given request.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array
-     */
-    private function sessionVariables(Request $request)
-    {
-        return $request->hasSession() ? $request->session()->all() : [];
+        return $originalContent instanceof View 
+                ? ['view' => $originalContent->getPath(), 'data' => $this->extractDataFromView($originalContent)]
+                : 'HTML Response';
     }
 
     /**
@@ -113,5 +130,27 @@ class RequestWatcher extends Watcher
         $limit = $this->options['size_limit'] ?? 64;
 
         return mb_strlen($content) / 1000 <= $limit;
+    }
+
+    /**
+     * Extract the data from the given view in array form.
+     *
+     * @param  \Illuminate\View\View  $view
+     * @return array
+     */
+    protected function extractDataFromView($view)
+    {
+        return collect($view->getData())->map(function ($value) {
+            if ($value instanceof Model) {
+                return get_class($value).':'.$value->getKey();
+            } elseif (is_object($value)) {
+                return [
+                    'class' => get_class($value),
+                    'properties' => json_decode(json_encode($value), true),
+                ];
+            } else {
+                return json_decode(json_encode($value), true);
+            }
+        })->toArray();
     }
 }

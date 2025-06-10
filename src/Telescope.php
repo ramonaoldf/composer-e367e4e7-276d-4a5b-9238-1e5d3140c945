@@ -28,6 +28,13 @@ class Telescope
     public static $filterUsing = [];
 
     /**
+     * The callbacks that filter the batches that should be recorded.
+     *
+     * @var array
+     */
+    public static $filterBatchUsing = [];
+
+    /**
      * The callback that adds tags to the record.
      *
      * @var \Closure
@@ -47,6 +54,15 @@ class Telescope
      * @var array
      */
     public static $updatesQueue = [];
+
+    /**
+     * The list of hidden request headers.
+     *
+     * @var array
+     */
+    public static $hiddenRequestHeaders = [
+        'authorization',
+    ];
 
     /**
      * The list of hidden request parameters.
@@ -360,7 +376,6 @@ class Telescope
      * @param  \Laravel\Telescope\IncomingEntry  $entry
      * @return void
      */
-
     public static function recordRequest(IncomingEntry $entry)
     {
         static::record(EntryType::REQUEST, $entry);
@@ -372,7 +387,6 @@ class Telescope
      * @param  \Laravel\Telescope\IncomingEntry  $entry
      * @return void
      */
-
     public static function recordScheduledCommand(IncomingEntry $entry)
     {
         static::record(EntryType::SCHEDULED_TASK, $entry);
@@ -381,7 +395,7 @@ class Telescope
     /**
      * Flush all entries in the queue.
      *
-     * @return  static
+     * @return static
      */
     public static function flushEntries()
     {
@@ -405,7 +419,7 @@ class Telescope
 
         event(new MessageLogged('error', $e->getMessage(), [
             'exception' => $e,
-            'telescope' => $tags
+            'telescope' => $tags,
         ]));
     }
 
@@ -418,6 +432,19 @@ class Telescope
     public static function filter(Closure $callback)
     {
         static::$filterUsing[] = $callback;
+
+        return new static;
+    }
+
+    /**
+     * Set the callback that filters the batches that should be recorded.
+     *
+     * @param  \Closure  $callback
+     * @return static
+     */
+    public static function filterBatch(Closure $callback)
+    {
+        static::$filterBatchUsing[] = $callback;
 
         return new static;
     }
@@ -445,6 +472,10 @@ class Telescope
     {
         if (empty(static::$entriesQueue) && empty(static::$updatesQueue)) {
             return;
+        }
+
+        if (! collect(static::$filterBatchUsing)->every->__invoke(collect(static::$entriesQueue))) {
+            static::flushEntries();
         }
 
         try {
@@ -497,6 +528,21 @@ class Telescope
     }
 
     /**
+     * Hide the given request header.
+     *
+     * @param  array  $headers
+     * @return static
+     */
+    public static function hideRequestHeaders(array $headers)
+    {
+        static::$hiddenRequestHeaders = array_merge(
+            static::$hiddenRequestHeaders, $headers
+        );
+
+        return new static;
+    }
+
+    /**
      * Hide the given request parameters.
      *
      * @param  array  $attributes
@@ -544,7 +590,7 @@ class Telescope
     {
         return [
             'path' => config('telescope.path'),
-            'timezone' => config('app.timezone')
+            'timezone' => config('app.timezone'),
         ];
     }
 }
