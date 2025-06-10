@@ -17,7 +17,7 @@ class ModelWatcher extends Watcher
      */
     public function register($app)
     {
-        $app['events']->listen('eloquent.*', [$this, 'recordAction']);
+        $app['events']->listen($this->options['events'] ?? 'eloquent.*', [$this, 'recordAction']);
     }
 
     /**
@@ -29,7 +29,7 @@ class ModelWatcher extends Watcher
      */
     public function recordAction($event, $data)
     {
-        if (! $this->shouldRecord($event)) {
+        if (! Telescope::isRecording() || ! $this->shouldRecord($event)) {
             return;
         }
 

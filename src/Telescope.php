@@ -35,6 +35,13 @@ class Telescope
     public static $filterBatchUsing = [];
 
     /**
+     * The callback executed after queuing a new entry.
+     *
+     * @var \Closure
+     */
+    public static $afterRecordingHook;
+
+    /**
      * The callback that adds tags to the record.
      *
      * @var \Closure
@@ -204,6 +211,16 @@ class Telescope
     }
 
     /**
+     * Determine if Telescope is recording.
+     *
+     * @return bool
+     */
+    public static function isRecording()
+    {
+        return static::$shouldRecord;
+    }
+
+    /**
      * Record the given entry.
      *
      * @param  string  $type
@@ -212,7 +229,7 @@ class Telescope
      */
     protected static function record(string $type, IncomingEntry $entry)
     {
-        if (! static::$shouldRecord) {
+        if (! static::isRecording()) {
             return;
         }
 
@@ -231,6 +248,10 @@ class Telescope
         static::withoutRecording(function () use ($entry) {
             if (collect(static::$filterUsing)->every->__invoke($entry)) {
                 static::$entriesQueue[] = $entry;
+            }
+
+            if (static::$afterRecordingHook) {
+                call_user_func(static::$afterRecordingHook, new static);
             }
         });
     }
@@ -455,6 +476,19 @@ class Telescope
     public static function filterBatch(Closure $callback)
     {
         static::$filterBatchUsing[] = $callback;
+
+        return new static;
+    }
+
+    /**
+     * Set the callback that will be executed after an entry is recorded in the queue.
+     *
+     * @param  \Closure  $callback
+     * @return static
+     */
+    public static function afterRecording(Closure $callback)
+    {
+        static::$afterRecordingHook = $callback;
 
         return new static;
     }
